@@ -36,7 +36,7 @@ export const siteConfig = {
     { id: "docs-cvm", label: "Documentos CVM", href: "/documentos-cvm.html", pageType: "lista", children: [] },
     { id: "fale-ri", label: "Fale com RI", href: "/fale-com-ri.html", children: [] },
     { id: "mailing", label: "Mailing", href: "/mailing.html", children: [] },
-    { id: "ezw9wbf", label: "Página de teste", href: "/n4ft0ix.html", children: [] },
+    { id: "ezw9wbf", label: "Página de teste", labels: {"pt-BR":"Página de teste"}, href: "/n4ft0ix.html", pageType: "lista", children: [] },
   ],
 
   empresas: [
