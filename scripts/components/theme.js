@@ -66,6 +66,14 @@ function luminance({ r, g, b }) {
   return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 }
 
+function contrastRatio(hexA, hexB) {
+  const lA = luminance(hexToRgb(hexA));
+  const lB = luminance(hexToRgb(hexB));
+  const lighter = Math.max(lA, lB);
+  const darker = Math.min(lA, lB);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 // Generate 9-step scale (100–900) from a base hex color
 function buildScale(hex) {
   const rgb = hexToRgb(hex);
@@ -99,8 +107,12 @@ function buildScale(hex) {
   return scale;
 }
 
+// Picks whichever of black/white gives the higher WCAG contrast against hex —
+// defaults to white on a tie so a failing black-on-color never gets applied.
 function onColor(hex) {
-  return luminance(hexToRgb(hex)) > 0.179 ? '#000000' : '#ffffff';
+  const onBlack = contrastRatio(hex, '#000000');
+  const onWhite = contrastRatio(hex, '#ffffff');
+  return onBlack > onWhite ? '#000000' : '#ffffff';
 }
 
 // ── Font ID → Google Fonts family name mapping ────────────────────────────────
@@ -164,8 +176,10 @@ export function initTheme(config) {
   if (colors.secondary) {
     const scale = buildScale(colors.secondary);
     const on    = onColor(colors.secondary);
+    const rgb   = hexToRgb(colors.secondary);
     rules.push(
       `  --color-secondary:        ${scale[500]};`,
+      `  --color-secondary-rgb:    ${rgb.r}, ${rgb.g}, ${rgb.b};`,
       `  --color-secondary-light:  ${scale[100]};`,
       `  --color-secondary-hover:  ${scale[700]};`,
       `  --color-on-secondary:     ${on};`,
@@ -176,7 +190,17 @@ export function initTheme(config) {
   }
 
   if (colors.tertiary) {
-    rules.push(`  --color-tertiary: ${colors.tertiary};`);
+    const scale = buildScale(colors.tertiary);
+    const on    = onColor(colors.tertiary);
+    rules.push(
+      `  --color-tertiary:        ${scale[500]};`,
+      `  --color-tertiary-light:  ${scale[100]};`,
+      `  --color-tertiary-hover:  ${scale[700]};`,
+      `  --color-on-tertiary:     ${on};`,
+      ...([100,200,300,400,500,600,700,800,900].map(n =>
+        `  --color-tertiary-${n}:   ${scale[n]};`
+      )),
+    );
   }
 
   if (rules.length > 0) {

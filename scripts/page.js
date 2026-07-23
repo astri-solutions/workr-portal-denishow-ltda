@@ -6,13 +6,23 @@ import { initHeader }  from './components/header.js';
 import { initFooter }  from './components/footer.js';
 import { initSearch }  from './components/search.js';
 import { initMaterias } from './components/materias.js';
+import { initDocumentos } from './components/documentos.js';
+import { initResultados } from './components/resultados.js';
 import { initSplash }  from './components/splash.js';
 import { initCookies } from './components/cookies.js';
+import { applyStoredContrast } from './topbar.js';
+import { getLang, t } from './lib/i18n.js';
 import './icons.js';
 import './reveal.js';
 import './accordion.js';
 import './counter.js';
 import './empresa-tabs.js';
+
+// Reflete o idioma escolhido no topbar antes de qualquer render
+document.documentElement.lang = getLang(siteConfig);
+// Reaplica alto contraste antes de qualquer render — sem isso, cada
+// navegação (site multi-página) resetava para desligado.
+applyStoredContrast();
 
 // Injeta cores e fontes do CMS antes de qualquer outro componente
 initTheme(siteConfig);
@@ -42,7 +52,17 @@ initTopbar(siteConfig);
 initHeader(siteConfig);
 initFooter(siteConfig);
 initSearch();
-initMaterias(siteConfig);
+initMaterias(siteConfig)
+  .then(found => initDocumentos(siteConfig, found))
+  .then(found => initResultados(siteConfig, found))
+  .then(() => {
+    // Só marca como "em construção" o que sobrou vazio DEPOIS de tentar
+    // carregar o conteúdo real — convertê-los assim que a página abre
+    // (antes do fetch assíncrono responder) piscava esse aviso em toda
+    // página com conteúdo cadastrado, mesmo quando ele carregava normalmente
+    // logo em seguida.
+    document.querySelectorAll('.page-empty').forEach(el => { el.outerHTML = emConstrucaoHTML(); });
+  });
 initSplash(siteConfig);
 initCookies(siteConfig);
 
@@ -72,18 +92,15 @@ document.querySelectorAll('.nav-dropdown__link').forEach(link => {
 
 // Substitui elementos .page-empty por bloco "Em construção"
 function emConstrucaoHTML() {
+  const lang = getLang(siteConfig);
   return `<div class="em-construcao">
     <svg class="em-construcao__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l5.654-4.654m5.598-2.346a3.025 3.025 0 0 0-4.243-2.43L8.31 9.5l-2.5-1.25-1.81.906L3 10.531l1.16 1.628.637-.22 2.24 1.12 5.154-5.154M17.25 3l.591.591a2.25 2.25 0 0 1 0 3.182l-8.862 8.862a4.5 4.5 0 0 1-1.897 1.13L6 16.5l.497-1.582a4.5 4.5 0 0 1 1.13-1.897l8.862-8.862A2.25 2.25 0 0 1 17.25 3Z" />
     </svg>
-    <p class="em-construcao__title">Em construção</p>
-    <p class="em-construcao__desc">Este conteúdo ainda não foi publicado. Em breve estará disponível.</p>
+    <p class="em-construcao__title">${t('emConstrucaoTitulo', lang)}</p>
+    <p class="em-construcao__desc">${t('emConstrucaoDesc', lang)}</p>
   </div>`;
 }
-
-document.querySelectorAll('.page-empty').forEach(el => {
-  el.outerHTML = emConstrucaoHTML();
-});
 
 // MutationObserver para capturar .page-empty adicionados dinamicamente
 const emConstrucaoObserver = new MutationObserver(mutations => {

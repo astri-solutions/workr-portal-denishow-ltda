@@ -69,23 +69,52 @@ function renderFieldInput(f) {
   return `<input type="text" name="${f.id}" placeholder="${f.placeholder ?? ''}" ${f.required ? 'required' : ''} />`;
 }
 
+function renderInfoCard(infoCard) {
+  if (!infoCard?.enabled) return '';
+  const paragrafos = String(infoCard.corpo ?? '')
+    .split(/\n\s*\n/)
+    .map(p => p.trim())
+    .filter(Boolean)
+    .map(p => `<p class="materia-info-card__text">${p.replace(/\n/g, '<br>')}</p>`)
+    .join('');
+  return `<aside class="materia-info-card">
+    ${infoCard.titulo ? `<h3 class="materia-info-card__title">${infoCard.titulo}</h3>` : ''}
+    ${paragrafos}
+  </aside>`;
+}
+
 function renderFormulario(m) {
   const cfg = m.content ?? {};
   const fields = Array.isArray(cfg.fields) ? cfg.fields : [];
+  const hasRequired = fields.some(f => f.required);
   const fieldsHtml = fields.map(f => `
     <label class="materia-form__field">
       <span class="materia-form__label">${f.label ?? ''}${f.required ? ' *' : ''}</span>
       ${renderFieldInput(f)}
     </label>`).join('');
 
-  return `<article class="materia-card materia-card--form" id="materia-${m.id}">
+  const formHtml = `<div class="materia-card materia-card--form">
+    ${m.titulo ? `<h2 class="materia-card__title">${m.titulo}</h2>` : ''}
     ${m.subtitulo ? `<p class="materia-card__subtitle">${m.subtitulo}</p>` : ''}
     <form class="materia-form" data-materia-form data-materia-id="${m.id}" novalidate>
       ${fieldsHtml}
-      <button class="btn btn--primary btn--lg" type="submit">${cfg.submitLabel ?? 'Enviar'}</button>
+      ${hasRequired ? `<p class="materia-form__hint">Todos os campos com (*) são obrigatórios</p>` : ''}
+      <div class="materia-form__actions">
+        <button class="btn btn--outline" type="reset">Limpar</button>
+        <button class="btn btn--primary" type="submit">${cfg.submitLabel ?? 'Enviar'}</button>
+      </div>
       <div class="materia-form__error" data-form-error aria-live="polite"></div>
       <div class="materia-form__success" data-form-success aria-live="polite">${cfg.successMessage ?? 'Mensagem enviada com sucesso!'}</div>
     </form>
+  </div>`;
+
+  const infoCardHtml = renderInfoCard(cfg.infoCard);
+  if (!infoCardHtml) {
+    return `<article class="materia-card--form-wrap" id="materia-${m.id}">${formHtml}</article>`;
+  }
+  return `<article class="materia-form-layout" id="materia-${m.id}">
+    ${formHtml}
+    ${infoCardHtml}
   </article>`;
 }
 
@@ -221,5 +250,5 @@ export async function initMaterias(siteConfig) {
   const sb = siteConfig?.supabase;
   const pageId = resolvePageId(siteConfig.nav);
   const container = document.querySelector('[data-materias]');
-  await loadMateriasInto(pageId, container, sb);
+  return loadMateriasInto(pageId, container, sb);
 }

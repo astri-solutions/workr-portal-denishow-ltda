@@ -23,6 +23,13 @@
     position: static;
   }
 
+  // The mobile hamburger drawer now lists every channel too (and activates
+  // the same in-page panel) — showing this strip as well on a phone-sized
+  // screen is a redundant, cramped second nav.
+  @include respond-down(tablet) {
+    display: none;
+  }
+
   &__list {
     display: flex;
     flex-direction: column;
@@ -38,6 +45,14 @@
       border-bottom: 2px solid var(--color-border);
       border-radius: 0;
       gap: $spacing-1;
+    }
+
+    // Mobile: one tab per row, full width, instead of wrapping into an
+    // uneven grid of boxes.
+    @include respond-down(tablet) {
+      flex-direction: column;
+      flex-wrap: nowrap;
+      border-bottom: none;
     }
   }
 
@@ -100,6 +115,16 @@
       &.is-active {
         background: #fff;
         border-bottom-color: #fff;
+      }
+    }
+
+    @include respond-down(tablet) {
+      width: 100%;
+      border-radius: 6px;
+      bottom: 0;
+
+      &.is-active {
+        border-bottom-color: var(--color-border);
       }
     }
   }

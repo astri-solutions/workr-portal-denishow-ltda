@@ -1,6 +1,12 @@
 // scripts/components/header.js
 import { initNav } from '../nav.js';
 import { isAuthenticated, openModal, logout } from './auth.js';
+import { getLang } from '../lib/i18n.js';
+
+const LANG_SHORT = { 'pt-BR': 'PT', 'pt': 'PT', 'en': 'EN', 'en-US': 'EN', 'es': 'ES', 'es-ES': 'ES' };
+const LANG_LABEL = { 'pt-BR': 'Português', 'pt': 'Português', 'en': 'English', 'en-US': 'English', 'es': 'Español', 'es-ES': 'Español' };
+function langShort(code) { return LANG_SHORT[code] ?? code.slice(0, 2).toUpperCase(); }
+function langLabel(code) { return LANG_LABEL[code] ?? code; }
 
 function lockIconSVG(open) {
   return open
@@ -20,11 +26,24 @@ function lockBtnHTML(auth) {
   return `${lockIconSVG(auth)}<span class="site-header__lock-label">Área Restrita</span>`;
 }
 
-function buildNavItem(item, restricted) {
+// Same slug derivation used by sidebar-nav.js / tab-menu.js — needed so the
+// mobile drawer link for a channel matches the in-page panel it should
+// activate, instead of navigating to that channel's old standalone page.
+function channelSlug(ch) {
+  return ch.id ?? ch.slug ?? ch.label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+function buildNavItem(item, restricted, isFlatLayout) {
   if (!item.children || item.children.length === 0) {
+    // Sidebar/tabmenu layouts render every channel inline on the home page
+    // (sidebar-nav.js / tab-menu.js) — there's no real standalone page to
+    // navigate to. Point the link at home+hash and let those scripts read
+    // the hash to activate the right panel, instead of leaving to the old
+    // per-channel .html page (a different layout's navigation model).
+    const href = isFlatLayout ? `/#${channelSlug(item)}` : item.href;
     return `
       <li class="nav-list__item${restricted ? ' nav-list__item--restricted' : ''}">
-        <a class="nav-list__trigger nav-list__trigger--link" href="${item.href}">
+        <a class="nav-list__trigger nav-list__trigger--link" href="${href}">
           ${item.label}
         </a>
       </li>`;
@@ -105,10 +124,14 @@ export function initHeader(config) {
 
   const publicItems     = config.nav || [];
   const restrictedItems = config.restrictedNav || [];
+  // Not to be confused with `variant` below (visual navbar style) — this is
+  // the actual layout model (sidebar/tabmenu render every channel inline on
+  // the home page; banner navigates to real per-channel pages).
+  const isFlatLayout = config.header?.variant === 'sidebar' || config.header?.variant === 'tabmenu';
 
   const navItems = [
-    ...publicItems.map(item => buildNavItem(item, false)),
-    ...restrictedItems.map(item => buildNavItem(item, true)),
+    ...publicItems.map(item => buildNavItem(item, false, isFlatLayout)),
+    ...restrictedItems.map(item => buildNavItem(item, true, isFlatLayout)),
   ].join('');
 
   const hideNav = el.hasAttribute('data-hide-nav');
@@ -117,6 +140,16 @@ export function initHeader(config) {
   const isBlur  = variant === 'navbar-blur';
   const logoSrc = (isDark || isBlur) ? config.company.logoNegative : config.company.logoOriginal;
   const auth    = isAuthenticated();
+
+  // Mesma regra do topbar: só mostra o seletor de idioma no drawer quando o
+  // portal foi criado com mais de um idioma.
+  const languages = config.languages ?? ['pt-BR'];
+  const showLangSwitcher = languages.length > 1;
+  const currentLang = getLang(config);
+  const drawerLangHtml = languages.map(code => `
+    <button class="topbar__lang-btn${code === currentLang ? ' is-active' : ''}" type="button"
+      data-lang="${code}" aria-pressed="${code === currentLang ? 'true' : 'false'}" aria-label="${langLabel(code)}">${langShort(code)}</button>`)
+    .join(`<span aria-hidden="true" style="opacity:0.3">|</span>`);
 
   el.className = `site-header site-header--${variant}`;
   el.innerHTML = `
@@ -138,11 +171,9 @@ export function initHeader(config) {
           </svg>
           <input type="search" placeholder="Buscar..." aria-label="Buscar" data-search-input />
         </div>
-        <div class="site-header__drawer-lang" role="group" aria-label="Idioma">
-          <button class="topbar__lang-btn is-active" type="button" data-lang="pt" aria-pressed="true">PT</button>
-          <span aria-hidden="true" style="opacity:0.3">|</span>
-          <button class="topbar__lang-btn" type="button" data-lang="en" aria-pressed="false">EN</button>
-        </div>
+        ${showLangSwitcher ? `<div class="site-header__drawer-lang" role="group" aria-label="Idioma">
+          ${drawerLangHtml}
+        </div>` : ''}
         <ul class="nav-list">${navItems}</ul>
         <div class="site-header__drawer-lock">
           <button class="site-header__lock site-header__lock--drawer${auth ? ' is-authenticated' : ''}"
@@ -151,7 +182,8 @@ export function initHeader(config) {
           </button>
         </div>
       </nav>
-      ${hideNav ? '' : `<div class="site-header__actions">
+      <div class="site-header__actions">
+        ${hideNav ? '' : `
         <button class="site-header__search" type="button" aria-label="Buscar" data-search-toggle>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="11" cy="11" r="8"/>
@@ -163,14 +195,27 @@ export function initHeader(config) {
             aria-label="Área Restrita — fazer login" data-lock-desktop>
             ${lockBtnHTML(auth)}
           </button>
-        </div>
+        </div>`}
         <button class="site-header__hamburger" type="button" aria-label="Abrir menu"
           aria-expanded="false" aria-controls="site-nav" data-nav-hamburger>
           <span></span><span></span><span></span>
         </button>
-      </div>`}
+      </div>
     </div>
     <div class="site-header__overlay" data-nav-overlay aria-hidden="true"></div>`;
+
+  // The mobile drawer (nav) and its dimming overlay are position: fixed,
+  // meant to cover the full viewport — but the navbar-blur header variant
+  // puts backdrop-filter on this same <header>, which creates a new
+  // containing block for any position: fixed descendant. Left inside, the
+  // drawer and overlay were confined to the header's own (tiny) box instead
+  // of the viewport, showing as a squashed strip with no dimmed background.
+  // Moving them out to be direct children of <body> sidesteps that
+  // entirely, regardless of any future filter/transform on the header.
+  const navEl = el.querySelector('[data-nav]');
+  const overlayEl = el.querySelector('[data-nav-overlay]');
+  if (navEl) document.body.appendChild(navEl);
+  if (overlayEl) document.body.appendChild(overlayEl);
 
   initNav();
   syncRestrictedItems();

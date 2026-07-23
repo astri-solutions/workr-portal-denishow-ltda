@@ -23,7 +23,13 @@
   &__brand { display: flex; align-items: center; flex-shrink: 0; }
   &__logo  { height: 24px; width: auto; }
 
-  &__nav--hidden { display: none !important; }
+  // Layouts sidebar/tabmenu já navegam pela sidebar-nav/tab-menu no desktop —
+  // o dropdown horizontal do navbar não faz sentido ali. Mas o menu mobile
+  // (hamburger + drawer com páginas e idioma) continua necessário nesses
+  // layouts, então só escondemos a apresentação de desktop.
+  &__nav--hidden {
+    @include respond-up(desktop) { display: none !important; }
+  }
 
   &__nav {
     @include respond-down(desktop) {
@@ -262,6 +268,14 @@
     transition: transform 0.3s, box-shadow 0.3s, top 0.2s ease, background 0.3s;
 
     &.is-scrolled { top: 0; }
+
+    // .topbar hides entirely below the desktop breakpoint — the 40px offset
+    // above was reserved for it, so on mobile/tablet it was just an empty
+    // gap of banner showing through above the header.
+    @include respond-down(desktop) {
+      top: 0;
+      &.is-scrolled { top: 0; }
+    }
     background: rgba(255,255,255,0.06);
     backdrop-filter: blur(6px) saturate(130%);
     -webkit-backdrop-filter: blur(6px) saturate(130%);

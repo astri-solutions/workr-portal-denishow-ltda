@@ -6,9 +6,9 @@ export const siteConfig = {
     name:        "Denishow LTDA",
     nameShort:   "Denishow LTDA",
     description: 'Relações com Investidores — Denishow LTDA.',
-    logoOriginal: '/assets/logotipo/logotipo-original.webp',
-    logoNegative: '/assets/logotipo/logotipo-negative.webp',
-    logoContrast: '/assets/logotipo/logotipo-negative.webp',
+    logoOriginal: '/assets/logotipo/logotipo-original.svg',
+    logoNegative: '/assets/logotipo/logotipo-negative.svg',
+    logoContrast: '/assets/logotipo/logotipo-negative.svg',
     favicon:      '/favicon.png',
   },
 
@@ -26,46 +26,37 @@ export const siteConfig = {
   ticker: {
     type:      "iframe",
     iframeUrl: "",
-    items: [],
+    items: [
+      { symbol: 'WRLT3', price: 'R$ 00,00', change: '0,00%', direction: 'up' }
+    ],
   },
 
   nav: [
     { id: "central-resultados", label: "Resultados", href: "/central-resultados.html", children: [] },
-    { id: "docs-cvm", label: "Documentos CVM", href: "/documentos-cvm.html", children: [] },
+    { id: "docs-cvm", label: "Documentos CVM", href: "/documentos-cvm.html", pageType: "lista-agrupada", children: [] },
     { id: "fale-ri", label: "Fale com RI", href: "/fale-com-ri.html", children: [] },
     { id: "mailing", label: "Mailing", href: "/mailing.html", children: [] },
     { id: "ezw9wbf", label: "Página de teste", href: "/n4ft0ix.html", children: [] },
   ],
 
   empresas: [
-    { id: 'principal', label: "Denishow LTDA", short: 'DL' },
+    { id: "principal-1784572788840", label: "Denishow LTDA", short: "DL" }
   ],
-
-  supabase: {
-    url:      "https://mmhuwlpsgnvoxyuofliq.supabase.co",
-    anonKey:  "sb_publishable_BBSPbQc2kZngiK45ecfXaA_X4NANiGj",
-    portalId: "42a7f151-3450-41b2-9a91-16247973f4e0",
-  },
 
   header: { variant: 'tabmenu' },
 
-  seo: {
-    title:             "Denishow LTDA - Relações com Investidores",
-    description:       "",
-    googleAnalyticsId: "",
-    clarityId:         "",
-  },
+  languages: ["pt-BR"],
 
-  contact: {
-    email: "",
+  topbar: {
+    ri: { label: "Relações com Investidores", url: "/" },
+    institucional: { label: "Institucional", url: "#" },
+    showTicker: true,
   },
-
-  languages: ["pt-BR","en","es"],
 
   restrictedNav: [],
 
   footer: {
-    variant:   'simple',
+    variant: 'simple',
     address:   "",
     email:     "",
     phone:     "",
@@ -78,6 +69,38 @@ export const siteConfig = {
       { label: "Definições de Cookies", href: "/definicao-de-cookies.html" }
     ],
     legalText: "As informações contidas neste site são de caráter meramente informativo e não constituem oferta de valores mobiliários.",
+  },
+
+  splash: {
+    enabled: false,
+    size: 'md',
+    titulo: '',
+    texto: '',
+    conteudo: '',
+    legenda: '',
+    buttons: [],
+  },
+
+  cookies: {
+    enabled: true,
+    layout: 'full',
+    theme: 'light',
+    title: 'Utilizamos cookies',
+    description: 'Usamos cookies para melhorar sua experiência.',
+    acceptLabel: 'Aceitar todos',
+    rejectLabel: 'Rejeitar',
+    showReject: true,
+    showCustomize: false,
+  },
+
+  errorPages: [],
+
+  banner: [],
+
+  supabase: {
+    url:      "https://mmhuwlpsgnvoxyuofliq.supabase.co",
+    anonKey:  "sb_publishable_BBSPbQc2kZngiK45ecfXaA_X4NANiGj",
+    portalId: "42a7f151-3450-41b2-9a91-16247973f4e0",
   },
 
 };
