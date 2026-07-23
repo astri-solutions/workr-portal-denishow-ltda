@@ -1,6 +1,6 @@
 // scripts/carousel.js
 import { siteConfig } from './site.config.js';
-import { getLang, pick } from './lib/i18n.js';
+import { getLang } from './lib/i18n.js';
 
 const SLIDES_DEFAULT = [
   {
@@ -43,14 +43,21 @@ function slidesFromConfig() {
   const raw = siteConfig.banner;
   if (!Array.isArray(raw) || raw.length === 0) return null;
   const lang = getLang(siteConfig);
+  const primaryLang = siteConfig.languages?.[0] ?? 'pt-BR';
   const primaryHref = (siteConfig.nav ?? []).find(ch => ch.enabled !== false)?.href ?? '#';
   const slides = raw.map(s => {
-    const c = pick(s.content, lang) ?? {};
+    const content = s.content ?? {};
+    // Fall back per FIELD to the primary locale, not per whole content
+    // object — a slide translated only partially for this language (e.g.
+    // título only) must still show the primary locale's subtítulo/CTA for
+    // whatever was left blank, instead of an empty subtitle/button.
+    const c = content[lang] ?? {};
+    const primary = content[primaryLang] ?? {};
     return {
       img: s.imagem || SLIDES_DEFAULT[0].img,
-      title: c.titulo ?? '',
-      subtitle: c.subtitulo ?? '',
-      cta: { label: c.cta ?? '', href: primaryHref },
+      title: c.titulo || primary.titulo || '',
+      subtitle: c.subtitulo || primary.subtitulo || '',
+      cta: { label: c.cta || primary.cta || '', href: primaryHref },
     };
   }).filter(s => s.title || s.subtitle);
   return slides.length > 0 ? slides : null;
@@ -78,6 +85,7 @@ function renderCarousel() {
           </div>
         </div>`).join('')}
     </div>
+    ${SLIDES.length > 1 ? `
     <div class="carousel__controls" aria-label="Navegação do carrossel">
       <button class="carousel__btn carousel__btn--prev" id="carousel-prev" aria-label="Slide anterior">
         <img src="/assets/icons/chevron-left.svg" width="20" height="20" aria-hidden="true" alt="">
@@ -90,7 +98,11 @@ function renderCarousel() {
       <button class="carousel__btn carousel__btn--next" id="carousel-next" aria-label="Próximo slide">
         <img src="/assets/icons/chevron-right.svg" width="20" height="20" aria-hidden="true" alt="">
       </button>
-    </div>`;
+    </div>` : ''}`;
+
+  // A single slide has nothing to navigate to or cycle through — the
+  // controls above aren't rendered at all in that case.
+  if (SLIDES.length <= 1) return;
 
   el.querySelector('#carousel-prev').addEventListener('click', () => goTo(current - 1));
   el.querySelector('#carousel-next').addEventListener('click', () => goTo(current + 1));

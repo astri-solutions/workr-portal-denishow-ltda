@@ -33,7 +33,7 @@ export const siteConfig = {
 
   nav: [
     { id: "central-resultados", label: "Resultados", href: "/central-resultados.html", children: [] },
-    { id: "docs-cvm", label: "Documentos CVM", href: "/documentos-cvm.html", pageType: "lista-agrupada", children: [] },
+    { id: "docs-cvm", label: "Documentos CVM", href: "/documentos-cvm.html", pageType: "lista", children: [] },
     { id: "fale-ri", label: "Fale com RI", href: "/fale-com-ri.html", children: [] },
     { id: "mailing", label: "Mailing", href: "/mailing.html", children: [] },
     { id: "ezw9wbf", label: "Página de teste", href: "/n4ft0ix.html", children: [] },
@@ -57,18 +57,14 @@ export const siteConfig = {
 
   footer: {
     variant: 'simple',
-    address:   "",
-    email:     "",
-    phone:     "",
-    hours:     "",
-    copyright: "©Copyright Denishow LTDA 2026",
+    email: "",
+    content: {"pt-BR":{"address":"","phone":"","hours":"","copyright":"©Copyright Denishow LTDA 2026","disclaimer":"As informações contidas neste site são de caráter meramente informativo e não constituem oferta de valores mobiliários."}},
     social: { linkedin: "#", instagram: "#", facebook: "#" },
     legalLinks: [
       { label: "Termos e Condições", href: "/termos-e-condicoes.html" },
       { label: "Política de Privacidade", href: "/politica-de-privacidade.html" },
       { label: "Definições de Cookies", href: "/definicao-de-cookies.html" }
     ],
-    legalText: "As informações contidas neste site são de caráter meramente informativo e não constituem oferta de valores mobiliários.",
   },
 
   splash: {

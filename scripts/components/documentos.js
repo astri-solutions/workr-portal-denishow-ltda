@@ -38,8 +38,18 @@ function extOf(path) {
 // Inline vector badge — crisp at any size, unlike the raster-in-SVG assets
 // under /assets/icons (those embed a bitmap pattern fill and blur when
 // scaled down to list-icon size). Exported for reuse by resultados.js.
-export function fileBadgeSvg(pathOrUrl) {
-  const label = pathOrUrl ? (EXT_LABEL[extOf(pathOrUrl)] ?? 'LINK') : '';
+// `isExternal` swaps the file-shape badge for an external-link glyph — an
+// external link isn't a file at all, so a "LINK" label stamped on a file
+// icon read as a wrong file type rather than as "opens elsewhere".
+export function fileBadgeSvg(pathOrUrl, isExternal = false) {
+  if (isExternal) {
+    return `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M15 3h6v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M10 14L21 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+  }
+  const label = pathOrUrl ? (EXT_LABEL[extOf(pathOrUrl)] ?? '') : '';
   return `<svg width="26" height="30" viewBox="0 0 26 30" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path d="M2 3.5C2 2.67157 2.67157 2 3.5 2H14.5L23 10.5V26.5C23 27.3284 22.3284 28 21.5 28H3.5C2.67157 28 2 27.3284 2 26.5V3.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
     <path d="M14.5 2V9.5C14.5 10.0523 14.9477 10.5 15.5 10.5H23" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
@@ -62,6 +72,19 @@ function titleOf(doc, lang) {
   return pick(doc.titulo, lang) || 'Documento';
 }
 
+// Each locale can have its own independent file/link (doc.arquivos), falling
+// back to the row's legacy flat file_path/external_link for documents saved
+// before per-locale files existed, or when this locale simply has nothing
+// of its own — the primary language's file is a reasonable default rather
+// than showing no document at all.
+function fileOf(doc, lang, primaryLang) {
+  const entry = doc.arquivos?.[lang] ?? doc.arquivos?.[primaryLang];
+  return {
+    filePath: entry?.filePath ?? doc.file_path,
+    externalLink: entry?.externalLink ?? doc.external_link,
+  };
+}
+
 function yearOf(doc) {
   return doc.created_at ? new Date(doc.created_at).getFullYear() : null;
 }
@@ -75,8 +98,9 @@ function groupLabel(doc, pageId) {
   return year ? String(year) : 'Documentos';
 }
 
-function docItemHtml(d, sb, lang) {
-  const href = d.external_link || fileUrl(sb, d.file_path);
+function docItemHtml(d, sb, lang, primaryLang) {
+  const file = fileOf(d, lang, primaryLang);
+  const href = file.externalLink || fileUrl(sb, file.filePath);
   const title = titleOf(d, lang);
   return `<li class="doc-list__item">
     <div class="doc-list__info">
@@ -86,21 +110,22 @@ function docItemHtml(d, sb, lang) {
     </div>
     <div class="doc-list__actions">
       <a href="${href}" class="doc-list__link doc-list__icon" aria-label="Baixar ${title}" target="_blank" rel="noopener">
-        ${fileBadgeSvg(d.file_path ?? d.external_link ?? '')}
+        ${fileBadgeSvg(file.filePath ?? file.externalLink ?? '', !!file.externalLink)}
       </a>
     </div>
   </li>`;
 }
 
-function tableRowHtml(d, sb, lang) {
-  const href = d.external_link || fileUrl(sb, d.file_path);
+function tableRowHtml(d, sb, lang, primaryLang) {
+  const file = fileOf(d, lang, primaryLang);
+  const href = file.externalLink || fileUrl(sb, file.filePath);
   const title = titleOf(d, lang);
   return `<tr class="doc-table__row">
     <td class="doc-table__cell doc-table__cell--date">${formatDate(d.created_at)}</td>
     <td class="doc-table__cell doc-table__cell--name">${title}</td>
     <td class="doc-table__cell doc-table__cell--action">
       <a href="${href}" class="doc-list__link doc-list__icon" aria-label="Baixar ${title}" target="_blank" rel="noopener">
-        ${fileBadgeSvg(d.file_path ?? d.external_link ?? '')}
+        ${fileBadgeSvg(file.filePath ?? file.externalLink ?? '', !!file.externalLink)}
       </a>
     </td>
   </tr>`;
@@ -109,7 +134,7 @@ function tableRowHtml(d, sb, lang) {
 // Tabela pageType — same documents as lista/lista-agrupada, laid out as rows
 // instead of a list or accordion. Content is identical either way; only the
 // presentation changes.
-function renderTable(list, sb, lang) {
+function renderTable(list, sb, lang, primaryLang) {
   if (!list.length) return `<p class="docs-vazio">${t('nenhumDocumento', lang)}</p>`;
   return `<div class="doc-table-wrap">
     <table class="doc-table">
@@ -121,18 +146,18 @@ function renderTable(list, sb, lang) {
         </tr>
       </thead>
       <tbody>
-        ${list.map(d => tableRowHtml(d, sb, lang)).join('')}
+        ${list.map(d => tableRowHtml(d, sb, lang, primaryLang)).join('')}
       </tbody>
     </table>
   </div>`;
 }
 
-function renderFlatList(list, sb, lang) {
+function renderFlatList(list, sb, lang, primaryLang) {
   if (!list.length) return `<p class="docs-vazio">${t('nenhumDocumento', lang)}</p>`;
-  return `<ul class="doc-list" role="list">${list.map(d => docItemHtml(d, sb, lang)).join('')}</ul>`;
+  return `<ul class="doc-list" role="list">${list.map(d => docItemHtml(d, sb, lang, primaryLang)).join('')}</ul>`;
 }
 
-function renderGroupedList(list, pageId, sb, lang) {
+function renderGroupedList(list, pageId, sb, lang, primaryLang) {
   if (!list.length) return `<p class="docs-vazio">${t('nenhumDocumento', lang)}</p>`;
   const groups = [];
   for (const d of list) {
@@ -152,7 +177,7 @@ function renderGroupedList(list, pageId, sb, lang) {
         </span>
       </button>
       <div class="accordion__body">
-        <ul class="doc-list" role="list">${g.docs.map(d => docItemHtml(d, sb, lang)).join('')}</ul>
+        <ul class="doc-list" role="list">${g.docs.map(d => docItemHtml(d, sb, lang, primaryLang)).join('')}</ul>
       </div>
     </div>`).join('');
   return `<div class="accordion" data-accordion>${groupHtml}</div>`;
@@ -185,6 +210,7 @@ function renderDocumentos(entry, docs, container, sb, siteConfig) {
   const empresas = siteConfig.empresas ?? [];
   const variant = siteConfig.header?.variant ?? 'sidebar';
   const lang = getLang(siteConfig);
+  const primaryLang = siteConfig.languages?.[0] ?? 'pt-BR';
   const showEmpresaTabs = empresas.length > 1 && variant !== 'tabmenu';
   const showEmpresaFilter = empresas.length > 1 && variant === 'tabmenu';
 
@@ -235,9 +261,9 @@ function renderDocumentos(entry, docs, container, sb, siteConfig) {
 
   function render() {
     const filtered = docs.filter(passesFilters);
-    const body = listType === 'lista' ? renderFlatList(filtered, sb, lang)
-      : listType === 'tabela' ? renderTable(filtered, sb, lang)
-      : renderGroupedList(filtered, pageId, sb, lang);
+    const body = listType === 'lista' ? renderFlatList(filtered, sb, lang, primaryLang)
+      : listType === 'tabela' ? renderTable(filtered, sb, lang, primaryLang)
+      : renderGroupedList(filtered, pageId, sb, lang, primaryLang);
     container.innerHTML = `${controlsHtml()}${empresaTabsHtml()}<div data-doc-content>${body}</div>`;
     bind();
   }
